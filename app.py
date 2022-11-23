@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import requests
 import streamlit as st
+from azure.identity import ClientSecretCredential, InteractiveBrowserCredential, UsernamePasswordCredential
 
 ### BORRAR
 interactive_browser_credential_class = InteractiveBrowserCredential()
