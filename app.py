@@ -5,6 +5,7 @@ import streamlit as st
 from azure.identity import ClientSecretCredential, InteractiveBrowserCredential, UsernamePasswordCredential
 
 ### BORRAR
+scope = 'https://analysis.windows.net/powerbi/api/.default'
 interactive_browser_credential_class = InteractiveBrowserCredential()
 access_token_class = interactive_browser_credential_class.get_token(scope)
 token_string = access_token_class.token
