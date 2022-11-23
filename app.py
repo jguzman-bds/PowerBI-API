@@ -40,4 +40,4 @@ df = post_dax_query(query, auth_token, dataset)
 
 # Have fun with your df
 print(df)
-st.write(df)
+st.dataframe(df)
