@@ -165,6 +165,116 @@ ORDER BY
 df_SEXOS = post_dax_query(query_SEXO, auth_token, dataset)
 
 
+query_SEXO = """// DAX Query
+DEFINE
+  VAR __DS0FilterTable = 
+    FILTER(
+      KEEPFILTERS(VALUES('ConsultaReconocimientoElemento'[FECHARECO])),
+      AND(
+        'ConsultaReconocimientoElemento'[FECHARECO] >= DATE(2021, 1, 1),
+        'ConsultaReconocimientoElemento'[FECHARECO] < DATE(2022, 1, 1)
+      )
+    )
+
+  VAR __DS0Core = 
+    SUMMARIZECOLUMNS(
+      ROLLUPADDISSUBTOTAL('ConsultaReconocimientoElemento'[TIPORECO], "IsGrandTotalRowTotal"),
+      ROLLUPADDISSUBTOTAL('ConsultaReconocimientoElemento'[SEXO], "IsGrandTotalColumnTotal"),
+      __DS0FilterTable,
+      "DistinctCountID", CALCULATE(DISTINCTCOUNT('ConsultaReconocimientoElemento'[ID])),
+      "A3", CALCULATE(
+        DIVIDE(DISTINCTCOUNT('ConsultaReconocimientoElemento'[ID]), CALCULATE(
+          DISTINCTCOUNT('ConsultaReconocimientoElemento'[ID]),
+          ALLSELECTED('ConsultaReconocimientoElemento'[TIPORECO]),
+          ALLSELECTED('ConsultaReconocimientoElemento'[SEXO])
+        ))
+      )
+    )
+
+  VAR __DS0CoreTableByDM1 = 
+    SELECTCOLUMNS(
+      KEEPFILTERS(FILTER(KEEPFILTERS(__DS0Core), [IsGrandTotalColumnTotal] = TRUE)),
+      "IsGrandTotalRowTotal", [IsGrandTotalRowTotal],
+      "'ConsultaReconocimientoElemento'[TIPORECO]", 'ConsultaReconocimientoElemento'[TIPORECO],
+      "SortBy_DM1_0", [DistinctCountID]
+    )
+
+  VAR __DS0PrimaryWithSortColumns = 
+    NATURALLEFTOUTERJOIN(
+      SUMMARIZE(__DS0Core, 'ConsultaReconocimientoElemento'[TIPORECO], [IsGrandTotalRowTotal]),
+      __DS0CoreTableByDM1
+    )
+
+  VAR __DS0PrimaryWindowed = 
+    TOPN(
+      102,
+      __DS0PrimaryWithSortColumns,
+      [IsGrandTotalRowTotal],
+      0,
+      [SortBy_DM1_0],
+      0,
+      'ConsultaReconocimientoElemento'[TIPORECO],
+      1
+    )
+
+  VAR __DS0SecondaryBase = 
+    SUMMARIZE(__DS0Core, 'ConsultaReconocimientoElemento'[SEXO], [IsGrandTotalColumnTotal])
+
+  VAR __DS0Secondary = 
+    TOPN(
+      102,
+      __DS0SecondaryBase,
+      [IsGrandTotalColumnTotal],
+      1,
+      'ConsultaReconocimientoElemento'[SEXO],
+      1
+    )
+
+  VAR __DS0BodyLimited = 
+    NATURALLEFTOUTERJOIN(
+      __DS0PrimaryWindowed,
+      SUBSTITUTEWITHINDEX(
+        __DS0Core,
+        "ColumnIndex",
+        __DS0Secondary,
+        [IsGrandTotalColumnTotal],
+        ASC,
+        'ConsultaReconocimientoElemento'[SEXO],
+        ASC
+      )
+    )
+
+
+EVALUATE
+  __DS0BodyLimited
+
+ORDER BY
+  [IsGrandTotalRowTotal] DESC,
+  [SortBy_DM1_0] DESC,
+  'ConsultaReconocimientoElemento'[TIPORECO],
+  [ColumnIndex]
+"""
+df_SEXO = post_dax_query(query_SEXO, auth_token, dataset)
+query = query_SEXO
+
+url= "https://api.powerbi.com/v1.0/myorg/datasets/"+dataset+"/executeQueries"        
+body = {"queries": [{"query": query}], "serializerSettings": {"incudeNulls": "true"}}
+headers={'Content-Type': 'application/json', "Authorization": "Bearer {}".format(auth_token)}
+res = requests.post(url, data = json.dumps(body), headers = headers)
+#get columns from json response - keys from dict
+columnas = list(res.json()['results'][0]['tables'][0]['rows'][0].keys())
+#get the number of rows to loop data
+filas = len(res.json()['results'][0]['tables'][0]['rows'])        
+#get data from json response - values from dict
+datos = [list(res.json()['results'][0]['tables'][0]['rows'][n].values()) for n in range(filas-1)]
+#build a dataframe from the collected data
+
+data = res.json()
+pandasdf = pd.json_normalize(data['results'][0]['tables'] , record_path =['rows'])
+matrix = pd.DataFrame(pandasdf, columns=['[DistinctCountID]', '[A3]', '[ColumnIndex]', 'ConsultaReconocimientoElemento[TIPORECO]'])
+final_mat = matrix.pivot(index = 'ConsultaReconocimientoElemento[TIPORECO]', columns = '[ColumnIndex]', values = ['[DistinctCountID]', '[A3]'])
+##
+
 
 
 import matplotlib.pyplot as plt
@@ -265,4 +375,4 @@ a_tipo_reco.set_title("Sexo");
 
 st.pyplot(p_tipo_reco)
 
-#st.dataframe(final_mat)
+st.dataframe(final_mat)
