@@ -4,4 +4,3 @@ msal
 pandas
 matplotlib
 numpy
-math
