@@ -1,7 +1,7 @@
-import streamlit as st
-
 from azure.identity import ClientSecretCredential, InteractiveBrowserCredential, UsernamePasswordCredential
 import requests
+
+import streamlit as st
 
 scope = st.secrets["scope"]
 
