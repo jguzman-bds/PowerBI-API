@@ -1,6 +1,17 @@
 from azure.identity import ClientSecretCredential, InteractiveBrowserCredential, UsernamePasswordCredential
 import requests
 
+scope = st.secrets["scope"]
+
+client_id = st.secrets["client_id"]
+
+username = st.secrets["username"]
+password = st.secrets["password"]
+
+tenant_id = st.secrets["tenant_id"]
+client_secret = st.secrets["client_secret"]
+
+authority_url = st.secrets["authority_url"]
 
 scope2 = [scope]
 
