@@ -101,6 +101,88 @@ ORDER BY
 
 df_TIPORECO = post_dax_query(query_TIPORECO, auth_token, dataset)
 
+
+query_EDAD = """// DAX Query
+DEFINE
+  VAR __DS0FilterTable = 
+    FILTER(
+      KEEPFILTERS(VALUES('ConsultaReconocimientoElemento'[FECHARECO])),
+      AND(
+        'ConsultaReconocimientoElemento'[FECHARECO] >= DATE(2021, 1, 1),
+        'ConsultaReconocimientoElemento'[FECHARECO] < DATE(2022, 1, 1)
+      )
+    )
+
+  VAR __DS0Core = 
+    SUMMARIZECOLUMNS(
+      'ConsultaReconocimientoElemento'[RangoEdad],
+      __DS0FilterTable,
+      "DistinctCountID", CALCULATE(DISTINCTCOUNT('ConsultaReconocimientoElemento'[ID]))
+    )
+
+  VAR __DS0BodyLimited = 
+    TOPN(1002, __DS0Core, 'ConsultaReconocimientoElemento'[RangoEdad], 1)
+
+EVALUATE
+  __DS0BodyLimited
+
+ORDER BY
+  'ConsultaReconocimientoElemento'[RangoEdad]
+"""
+
+df_EDAD = post_dax_query(query_EDAD, auth_token, dataset)
+
+
+query_SEXO = """// DAX Query
+DEFINE
+  VAR __DS0FilterTable = 
+    FILTER(
+      KEEPFILTERS(VALUES('ConsultaReconocimientoElemento'[FECHARECO])),
+      AND(
+        'ConsultaReconocimientoElemento'[FECHARECO] >= DATE(2021, 1, 1),
+        'ConsultaReconocimientoElemento'[FECHARECO] < DATE(2022, 1, 1)
+      )
+    )
+
+  VAR __DS0Core = 
+    SUMMARIZECOLUMNS(
+      'ConsultaReconocimientoElemento'[SEXO],
+      __DS0FilterTable,
+      "DistinctCountID", CALCULATE(DISTINCTCOUNT('ConsultaReconocimientoElemento'[ID]))
+    )
+
+  VAR __DS0BodyLimited = 
+    TOPN(1002, __DS0Core, [DistinctCountID], 0, 'ConsultaReconocimientoElemento'[SEXO], 1)
+
+EVALUATE
+  __DS0BodyLimited
+
+ORDER BY
+  [DistinctCountID] DESC, 'ConsultaReconocimientoElemento'[SEXO]
+
+"""
+
+df_SEXOS = post_dax_query(query_SEXO, auth_token, dataset)
+
+
+query = query_SEXO
+
+url= "https://api.powerbi.com/v1.0/myorg/datasets/"+dataset+"/executeQueries"        
+body = {"queries": [{"query": query}], "serializerSettings": {"incudeNulls": "true"}}
+headers={'Content-Type': 'application/json', "Authorization": "Bearer {}".format(auth_token)}
+res = requests.post(url, data = json.dumps(body), headers = headers)
+#get columns from json response - keys from dict
+columnas = list(res.json()['results'][0]['tables'][0]['rows'][0].keys())
+#get the number of rows to loop data
+filas = len(res.json()['results'][0]['tables'][0]['rows'])        
+#get data from json response - values from dict
+datos = [list(res.json()['results'][0]['tables'][0]['rows'][n].values()) for n in range(filas-1)]
+#build a dataframe from the collected data
+
+data = res.json()
+pandasdf = pd.json_normalize(data['results'][0]['tables'] , record_path =['rows'])
+matrix = pd.DataFrame(pandasdf, columns=['[DistinctCountID]', '[A3]', '[ColumnIndex]', 'ConsultaReconocimientoElemento[TIPORECO]'])
+final_mat = matrix.pivot(index = 'ConsultaReconocimientoElemento[TIPORECO]', columns = '[ColumnIndex]', values = ['[DistinctCountID]', '[A3]'])
 ##
 
 import matplotlib.pyplot as plt
@@ -137,3 +219,68 @@ p_tipo_reco.set_edgecolor('white')
 
 a_tipo_reco.set_title("Tipos de reconocimiento");
 st.pyplot(p_tipo_reco)
+
+
+values_EDAD = df_EDAD['[DistinctCountID]']
+labels_EDAD = df_EDAD['ConsultaReconocimientoElemento[RangoEdad]']
+
+p_tipo_reco, a_tipo_reco = plt.subplots()
+
+l = a_tipo_reco.pie(values_EDAD, startangle=15)
+
+for label, t in zip(labels_EDAD, l[1]):
+    x, y = t.get_position()
+    angle = int(math.degrees(math.atan2(y, x)))
+    ha = "left"
+    va = "bottom"
+
+    if angle > 90:
+        angle -= 180
+
+    if angle < 0:
+        va = "top"
+
+    if -45 <= angle <= 0:
+        ha = "right"
+        va = "bottom"
+
+    plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
+
+p_tipo_reco.set_edgecolor('white')
+
+a_tipo_reco.set_title("Rangos de edad");
+st.pyplot(p_tipo_reco)
+
+
+values_SEXO = df_SEXOS['[DistinctCountID]']
+labels_SEXO = df_SEXOS['ConsultaReconocimientoElemento[SEXO]']
+
+p_tipo_reco, a_tipo_reco = plt.subplots()
+
+l = a_tipo_reco.pie(values_SEXO, startangle=67)
+
+for label, t in zip(labels_SEXO, l[1]):
+    x, y = t.get_position()
+    angle = int(math.degrees(math.atan2(y, x)))
+    ha = "left"
+    va = "bottom"
+
+    if angle > 90:
+        angle -= 180
+
+    if angle < 0:
+        va = "top"
+
+    if -45 <= angle <= 0:
+        ha = "right"
+        va = "bottom"
+
+    plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
+
+p_tipo_reco.set_edgecolor('white')
+
+a_tipo_reco.set_title("Sexo");
+
+st.pyplot(p_tipo_reco)
+
+st.dataframe(final_mat)
