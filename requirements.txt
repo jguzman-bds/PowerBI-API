@@ -4,3 +4,4 @@ msal
 pandas
 matplotlib
 numpy
+streamlit
