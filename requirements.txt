@@ -1,1 +1,8 @@
 azure.identity
+requests
+msal
+json
+pandas
+matplotlib
+numpy
+math
