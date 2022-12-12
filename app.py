@@ -2,21 +2,21 @@ from azure.identity import ClientSecretCredential, InteractiveBrowserCredential,
 import requests
 
 
-scope = [scope]
+scope2 = [scope]
 
 
 import msal
 
 
-def get_token_username_password(scope):
+def get_token_username_password(scope2):
     app = msal.PublicClientApplication(client_id, authority=authority_url)
-    result = app.acquire_token_by_username_password(username=username,password=password,scopes=scope)
+    result = app.acquire_token_by_username_password(username=username,password=password,scopes=scope2)
     if 'access_token' in result:
         return(result['access_token'])
     else:
         print('Error in get_token_username_password:',result.get("error"), result.get("error_description"))
         
-token_string = get_token_username_password(scope)
+token_string = get_token_username_password(scope2)
 auth_token = token_string
 
 ##
