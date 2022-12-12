@@ -123,3 +123,4 @@ for label, t in zip(labels_TIPORECO, l[1]):
 p_tipo_reco.set_edgecolor('white')
 
 a_tipo_reco.set_title("Tipos de reconocimiento");
+st.pyplot(p_tipo_reco)
